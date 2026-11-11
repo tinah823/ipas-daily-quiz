@@ -33,6 +33,18 @@ pre{background:#101c2c;color:#f0f4fb}.python-code code,.code-options .option-tex
 @keyframes nes-course{0%{left:3%;bottom:32px}10%{left:8%;bottom:32px}13%{left:12%;bottom:104px}18%,19%{left:18.5%;bottom:74px}23%{left:24%;bottom:146px}27%,28%{left:29%;bottom:116px}31%{left:36%;bottom:210px}35%{left:43%;bottom:172px}40%{left:47%;bottom:172px}47%{left:60%;bottom:293px}53%,58%{left:71%;bottom:245px}75%{left:71%;bottom:32px}80%{left:76%;bottom:32px}93%,100%{left:89%;bottom:32px}}
 .playing .firework,.playing .firework i{animation-iteration-count:4}@media(prefers-reduced-motion:reduce){.playing .firework,.playing .firework i{animation:none}}
 
+/* The finish animation runs only after an explicit user click.
+   This more-specific class overrides reduced-motion CSS for that requested playback. */
+.finish-scene.playing.force-motion .finish-mario{animation:nes-course 9s linear both}
+.finish-scene.playing.force-motion .finish-flag{animation:nes-flag 9s linear both}
+.finish-scene.playing.force-motion .finish-caption{animation:nes-message 9s linear both}
+.finish-scene.playing.force-motion .firework{animation:firework-show 1.2s ease-out 7.2s 4}
+.finish-scene.playing.force-motion .burst-1{animation-delay:7.55s}
+.finish-scene.playing.force-motion .burst-2{animation-delay:7.9s}
+.finish-scene.playing.force-motion .firework i{animation:spark-spread 1.2s ease-out 7.2s 4}
+.finish-scene.playing.force-motion .burst-1 i{animation-delay:7.55s}
+.finish-scene.playing.force-motion .burst-2 i{animation-delay:7.9s}
+
 </style></head>
 <body><header class="top"><div class="brand"><span class="brand-icon">詞</span>每日一詞<span class="brand-sub">AI STUDY NOTES</span></div></header>
 <main><section class="hero"><div class="hero-copy"><h1>SMOTE<span class="full-name"><b>S</b>ynthetic <b>M</b>inority <b>O</b>ver-sampling <b>Te</b>chnique</span><span class="serif">補對樣本，<br>也要守住資料邊界。</span></h1><p class="intro">從銀行盜刷情境出發，理解 SMOTE 與防洩漏。<br class="desktop">六個學習頁籤，串起觀念、實作與情境解題。</p></div><div class="hero-visual"><div class="visual-top"><span>SMOTE / 少數類近鄰插值</span><span class="live-label">概念示意</span></div><svg viewBox="0 0 460 310" role="img" aria-label="少數類原始樣本之間進行插值，產生合成樣本；背景灰點代表多數類。位置與數量僅為示意。"><defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M 32 0 L 0 0 0 32" fill="none" stroke="#e3e5dc" stroke-width="1"/></pattern></defs><rect width="460" height="310" fill="url(#grid)"/><g fill="#b7bdb2"><circle cx="40" cy="65" r="5"/><circle cx="92" cy="40" r="5"/><circle cx="140" cy="86" r="5"/><circle cx="210" cy="42" r="5"/><circle cx="325" cy="50" r="5"/><circle cx="399" cy="91" r="5"/><circle cx="60" cy="151" r="5"/><circle cx="102" cy="215" r="5"/><circle cx="45" cy="259" r="5"/><circle cx="183" cy="258" r="5"/><circle cx="335" cy="256" r="5"/><circle cx="412" cy="219" r="5"/><circle cx="365" cy="168" r="5"/><circle cx="275" cy="279" r="5"/></g><path d="M180 170 L296 110 L275 218 Z" fill="#dce8b5" fill-opacity=".45" stroke="#6f853d" stroke-width="1.5" stroke-dasharray="5 5"/><g fill="#365f40" stroke="#fff" stroke-width="3"><circle cx="180" cy="170" r="9"/><circle cx="296" cy="110" r="9"/><circle cx="275" cy="218" r="9"/></g><g fill="#d6e992" stroke="#6f853d" stroke-width="2"><circle cx="226" cy="146" r="7"/><circle cx="247" cy="204" r="7"/><circle cx="287" cy="157" r="7"/></g><rect x="151" y="71" width="104" height="30" rx="7" fill="#fff"/><text x="203" y="91" text-anchor="middle" font-size="12" fill="#365f40">在鄰居之間插值</text><path d="M208 104 L223 132" stroke="#6f853d" fill="none"/></svg><div class="legend"><span><i class="gray"></i>多數類</span><span><i class="green"></i>少數類</span><span><i class="lime"></i>合成樣本</span></div><div class="visual-foot"><span>不是複製，是合成。</span><span>01 / 05</span></div></div></section>
@@ -330,16 +342,31 @@ stage.addEventListener('pointermove',event=>{const prev=pointers.get(event.point
 for(const type of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(type,event=>{pointers.delete(event.pointerId);if(pointers.size<2)pinchDistance=0;});
 addEventListener('resize',()=>{if(lightbox.open)applyZoom(zoom);});
 
-function finishAnimation(){clearTimeout(finishTimer);const scene=document.getElementById('finish-scene');scene.classList.remove('playing');scene.classList.add('finished');document.getElementById('skip-finish').hidden=true;}
+function finishAnimation(){
+ clearTimeout(finishTimer);finishTimer=null;
+ const scene=document.getElementById('finish-scene');
+ scene.classList.remove('playing','force-motion');
+ scene.classList.add('finished');
+ document.getElementById('skip-finish').hidden=true;
+}
 document.getElementById('reveal-statistics').addEventListener('click',()=>{
  if(document.getElementById('reveal-statistics').disabled)return;
  statisticsRevealed=true;render();
- const scene=document.getElementById('finish-scene');scene.hidden=false;scene.classList.remove('playing','finished');
+ const scene=document.getElementById('finish-scene');
+ // Cancel the previous run before restarting; otherwise its timer could end this replay early.
+ clearTimeout(finishTimer);finishTimer=null;
+ const viewport=document.getElementById('finish-viewport');
+ viewport.hidden=false;scene.hidden=false;
+ scene.classList.remove('playing','finished','force-motion');
  document.getElementById('skip-finish').hidden=false;
- if(matchMedia('(prefers-reduced-motion: reduce)').matches)finishAnimation();
- else{void scene.offsetWidth;scene.classList.add('playing');finishTimer=setTimeout(finishAnimation,12200);}
+ fitFinishViewport(true);
+ // Play/replay is initiated by the user. Force a fresh CSS animation frame even
+ // when the device has reduced-motion enabled; "略過動畫" remains available.
+ void scene.offsetWidth;
+ scene.classList.add('playing','force-motion');
+ finishTimer=setTimeout(finishAnimation,12200);
  document.getElementById('statistics-content').focus({preventScroll:true});
- fitFinishViewport(true);finishSoundStarted=performance.now();startFinishSound();
+ finishSoundStarted=performance.now();startFinishSound();
 });
 document.getElementById('skip-finish').addEventListener('click',finishAnimation);
 document.getElementById('gate-reset').addEventListener('click',()=>document.getElementById('reset').click());
@@ -353,7 +380,7 @@ function fitFinishViewport(scroll){
 }
 function stopFinishSound(){finishAudioGeneration++;for(const node of finishAudioNodes){try{node.stop();}catch{}}finishAudioNodes=[];}
 async function startFinishSound(){
- stopFinishSound();if(!finishSoundEnabled||matchMedia('(prefers-reduced-motion: reduce)').matches)return;const generation=finishAudioGeneration;
+ stopFinishSound();if(!finishSoundEnabled)return;const generation=finishAudioGeneration;
  try{
   finishAudioContext??=new(window.AudioContext||window.webkitAudioContext)();await finishAudioContext.resume();
   finishBuffers??=Promise.all(['jump','flag','clear','fire'].map(async id=>{const src=document.getElementById('finish-audio-'+id).src;const bytes=await(await fetch(src)).arrayBuffer();return finishAudioContext.decodeAudioData(bytes);}));
